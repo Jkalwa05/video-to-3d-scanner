@@ -83,14 +83,14 @@ http://127.0.0.1:3000
 
 ## API-Endpunkte
 
-- `POST /api/ingest-scan`
-  - speichert ein Scan-Paket auf dem Laptop
-- `GET /api/scans`
-  - listet alle gespeicherten Scan-Pakete
-- `GET /api/scans/:id`
-  - laedt ein gespeichertes Paket inklusive Frames
-- `POST /api/analyze-stored-scan`
-  - analysiert einen bereits gespeicherten Scan auf dem Laptop
+- `POST /api/ingest-scan` — speichert ein Scan-Paket auf dem Laptop
+- `GET /api/scans` — listet alle gespeicherten Scan-Pakete
+- `GET /api/scans/:id` — laedt ein gespeichertes Paket inklusive Frames
+- `POST /api/analyze-stored-scan` — analysiert einen gespeicherten Scan mit Gemini; Ergebnis wird zurueckgeschrieben
+- `POST /api/analyze-scan` — analysiert einen Scan direkt aus dem Request-Body (kein vorheriger Ingest noetig)
+- `POST /api/analyze-image` — analysiert ein einzelnes Bild (base64) mit Gemini
+- `POST /api/analyze-video-frames` — analysiert eine Folge von Video-Frames (base64, ohne File-Upload)
+- `POST /api/analyze-full-video` — laedt ein ganzes Video ueber die Gemini Files API hoch und analysiert es
 
 ## Was dieser MVP heute kann
 

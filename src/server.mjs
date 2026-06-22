@@ -266,10 +266,6 @@ function addVectors(a, b) {
   return { x: a.x + b.x, y: a.y + b.y, z: a.z + b.z };
 }
 
-function subtractVectors(a, b) {
-  return { x: a.x - b.x, y: a.y - b.y, z: a.z - b.z };
-}
-
 function scaleVector(vector, scalar) {
   return { x: vector.x * scalar, y: vector.y * scalar, z: vector.z * scalar };
 }
