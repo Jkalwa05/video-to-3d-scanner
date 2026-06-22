@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hero Scan Copilot</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Hero x Gemini Hackathon</p>
+          <h1>Capture auf dem Handy, Auswertung auf dem Laptop</h1>
+          <p class="intro">
+            Der Scan passiert mobil auf dem Smartphone. Nur die gefilterten, relevanten
+            Frames und Sensordaten werden an diesen Rechner uebertragen. Die eigentliche
+            Gemini-Analyse, 3D-Zuordnung und Handwerker-Logik laufen danach lokal auf
+            dem Laptop.
+          </p>
+          <p id="secureHint" class="hero-note">
+            Kamera und Sensoren brauchen auf dem Smartphone eine sichere Umgebung
+            wie HTTPS oder localhost.
+          </p>
+        </div>
+
+        <aside class="status-card">
+          <div class="status-row">
+            <span>Kamera</span>
+            <strong id="capCamera">Pruefung...</strong>
+          </div>
+          <div class="status-row">
+            <span>Gyro / Bewegung</span>
+            <strong id="capMotion">Pruefung...</strong>
+          </div>
+          <div class="status-row">
+            <span>WebXR AR</span>
+            <strong id="capWebXR">Pruefung...</strong>
+          </div>
+          <div class="status-row">
+            <span>Depth / LiDAR</span>
+            <strong id="capDepth">Optional</strong>
+          </div>
+          <div class="status-row">
+            <span>Pose-Modus</span>
+            <strong id="poseMode">Heuristisch</strong>
+          </div>
+        </aside>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <p class="section-kicker">1. Mobile Capture</p>
+            <h2>Scan aufnehmen</h2>
+            <p>
+              Rueckkamera aktivieren, Sensoren freigeben und dann langsam scannen.
+              Die App behaelt nur scharfe und hinreichend unterschiedliche Frames.
+            </p>
+          </div>
+          <div class="button-row">
+            <button id="cameraButton">Kamera freigeben</button>
+            <button id="motionButton" class="secondary">Gyro freigeben</button>
+            <button id="scanButton">Scan starten</button>
+            <button id="stopScanButton" class="secondary">Scan stoppen</button>
+          </div>
+        </div>
+
+        <div class="control-grid">
+          <label class="field">
+            <span>Scan-Typ</span>
+            <select id="scanType">
+              <option value="room">Raum / Baustelle</option>
+              <option value="object">Einzelobjekt / Anlage</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Maximale Analyse-Frames</span>
+            <input id="frameBudget" type="range" min="4" max="12" step="1" value="8" />
+            <strong id="frameBudgetValue">8</strong>
+          </label>
+
+          <label class="field">
+            <span>Capture-Intervall</span>
+            <input id="captureInterval" type="range" min="300" max="1600" step="100" value="700" />
+            <strong id="captureIntervalValue">700 ms</strong>
+          </label>
+
+          <label class="field">
+            <span>Unschaerfe-Schwelle</span>
+            <input id="blurThreshold" type="range" min="30" max="220" step="5" value="95" />
+            <strong id="blurThresholdValue">95</strong>
+          </label>
+
+          <label class="field">
+            <span>Duplicate-Schwelle</span>
+            <input id="duplicateThreshold" type="range" min="0.02" max="0.22" step="0.01" value="0.07" />
+            <strong id="duplicateThresholdValue">0.07</strong>
+          </label>
+        </div>
+
+        <div class="two-field-grid">
+          <label class="field">
+            <span>Geraetename</span>
+            <input id="deviceLabel" type="text" placeholder="z.B. Jonas iPhone" />
+          </label>
+
+          <label class="field">
+            <span>Analyse-Fokus</span>
+            <textarea
+              id="scanPrompt"
+              rows="3"
+              placeholder="Beispiel: Finde Werkzeuge, Materialien, Risiken, fehlende Teile, moegliche Probleme und naechste Schritte fuer den Handwerker."
+            ></textarea>
+          </label>
+        </div>
+
+        <div class="scan-layout">
+          <div class="stage-card">
+            <div class="camera-stage">
+              <video id="liveVideo" autoplay muted playsinline></video>
+              <canvas id="liveOverlay"></canvas>
+            </div>
+            <p id="scanStatus" class="status-line">
+              Bereit. Aktiviere Kamera und Sensoren, dann starte den Scan.
+            </p>
+          </div>
+
+          <div class="stage-card">
+            <h3>Sensoren & Telemetrie</h3>
+            <div class="telemetry-grid">
+              <div class="telemetry-item">
+                <span>Yaw</span>
+                <strong id="yawValue">--</strong>
+              </div>
+              <div class="telemetry-item">
+                <span>Pitch</span>
+                <strong id="pitchValue">--</strong>
+              </div>
+              <div class="telemetry-item">
+                <span>Roll</span>
+                <strong id="rollValue">--</strong>
+              </div>
+              <div class="telemetry-item">
+                <span>Beschleunigung</span>
+                <strong id="accValue">--</strong>
+              </div>
+              <div class="telemetry-item">
+                <span>Depth / LiDAR</span>
+                <strong id="depthValue">Fallback</strong>
+              </div>
+              <div class="telemetry-item">
+                <span>Scan-Abdeckung</span>
+                <strong id="coverageValue">0%</strong>
+              </div>
+            </div>
+            <pre id="preprocessSummary" class="result-box compact">
+Noch keine Capture-Daten.
+            </pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <p class="section-kicker">2. Transfer</p>
+            <h2>Relevante Scan-Daten an den Laptop senden</h2>
+            <p>
+              Nach dem Scan werden nur die gefilterten Frames und Metadaten uebertragen.
+              Die Auswertung startet danach erst hier in der Laptop-Inbox.
+            </p>
+          </div>
+          <div class="button-row">
+            <button id="sendScanButton">Scan an Laptop senden</button>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-pill">
+            <span>Kandidaten</span>
+            <strong id="statCandidates">0</strong>
+          </div>
+          <div class="stat-pill">
+            <span>Behalten</span>
+            <strong id="statAccepted">0</strong>
+          </div>
+          <div class="stat-pill">
+            <span>Unscharf</span>
+            <strong id="statBlur">0</strong>
+          </div>
+          <div class="stat-pill">
+            <span>Duplicate</span>
+            <strong id="statDuplicate">0</strong>
+          </div>
+        </div>
+
+        <div id="frameStrip" class="frame-strip empty-state">
+          Noch keine Frames ausgewaehlt.
+        </div>
+
+        <p id="transferStatus" class="status-banner muted">
+          Noch kein Scan-Paket an den Laptop uebertragen.
+        </p>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <p class="section-kicker">3. Laptop Inbox</p>
+            <h2>Eingehende Scans laden und hier auswerten</h2>
+            <p>
+              Diese Liste zeigt die Scan-Pakete, die auf diesem Rechner gespeichert
+              wurden. Lade einen Scan und starte die Gemini-Auswertung lokal von hier.
+            </p>
+          </div>
+          <div class="button-row">
+            <button id="refreshInboxButton" class="secondary">Inbox aktualisieren</button>
+            <button id="analyzeStoredButton">Ausgewaehlten Scan hier analysieren</button>
+          </div>
+        </div>
+
+        <div class="inbox-summary">
+          <div class="telemetry-item">
+            <span>Ausgewaehlter Scan</span>
+            <strong id="selectedScanLabel">Noch keiner</strong>
+          </div>
+          <div class="telemetry-item">
+            <span>Inbox-Status</span>
+            <strong id="inboxStatus">Noch keine Scans geladen.</strong>
+          </div>
+        </div>
+
+        <div id="inboxList" class="inbox-list">
+          <p class="placeholder">Noch keine Scan-Pakete vorhanden.</p>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <p class="section-kicker">4. Analysis</p>
+            <h2>Gemini + 3D Scene Mapping</h2>
+            <p>
+              Nach dem Laden eines gespeicherten Scans wird die Analyse auf dem Laptop
+              ausgefuehrt und als Scene Graph plus Handwerker-Insights visualisiert.
+            </p>
+          </div>
+        </div>
+
+        <div class="scene-layout">
+          <div class="scene-card">
+            <h3>3D-Szene</h3>
+            <canvas id="sceneCanvas" width="920" height="620"></canvas>
+            <p id="sceneNote" class="scene-note">
+              Noch keine Analyse. Nach dem Laden und Auswerten eines Inbox-Scans werden
+              Kamerastandorte und Objektanker hier visualisiert.
+            </p>
+          </div>
+
+          <div class="scene-card">
+            <h3>Objekte im Scan</h3>
+            <div id="objectList" class="object-list">
+              <p class="placeholder">Noch keine Objekte erkannt.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="report-grid">
+          <article class="report-card">
+            <h3>Automatisierte Zusammenfassung</h3>
+            <div id="summaryList" class="stacked-output">
+              <p class="placeholder">Noch keine Zusammenfassung.</p>
+            </div>
+          </article>
+
+          <article class="report-card">
+            <h3>Probleme & Unsicherheiten</h3>
+            <div id="problemList" class="stacked-output">
+              <p class="placeholder">Noch keine Probleme erkannt.</p>
+            </div>
+          </article>
+
+          <article class="report-card">
+            <h3>Teile & Werkzeuge</h3>
+            <div id="partsToolsList" class="stacked-output">
+              <p class="placeholder">Noch keine Teile- oder Werkzeughinweise.</p>
+            </div>
+          </article>
+
+          <article class="report-card">
+            <h3>Naechste Schritte & Kosten</h3>
+            <div id="nextStepsList" class="stacked-output">
+              <p class="placeholder">Noch keine Handlungsempfehlungen.</p>
+            </div>
+          </article>
+        </div>
+
+        <pre id="rawResult" class="result-box">
+Noch keine Analyse.
+        </pre>
+      </section>
+    </main>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
